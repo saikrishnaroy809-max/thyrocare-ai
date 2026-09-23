@@ -1,11 +1,10 @@
-
 import gradio as gr
 import pandas as pd
 import joblib
 import os
 
 # ==============================
-# Load Model Files
+# File Paths
 # ==============================
 
 MODEL_FILE = "thyroid_model.pkl"
@@ -13,11 +12,22 @@ SCALER_FILE = "thyroid_scaler.pkl"
 FEATURES_FILE = "thyroid_features.pkl"
 DATASET_FILE = "cleaned_dataset_Thyroid1.csv"
 
+
+# ==============================
+# Load Model Files
+# ==============================
+
 loaded_model = joblib.load(MODEL_FILE)
 loaded_scaler = joblib.load(SCALER_FILE)
 loaded_features = joblib.load(FEATURES_FILE)
 
 X = pd.read_csv(DATASET_FILE)
+
+print("✅ Model loaded successfully")
+print("✅ Scaler loaded successfully")
+print("✅ Features loaded successfully")
+print("✅ Dataset loaded successfully")
+
 
 # ==============================
 # Prediction Function
@@ -33,9 +43,12 @@ def final_prediction(patient_data):
     patient_scaled = loaded_scaler.transform(patient_df)
 
     prediction = loaded_model.predict(patient_scaled)[0]
-    probabilities = loaded_model.predict_proba(patient_scaled)[0]
 
-    confidence = probabilities[prediction] * 100
+    probabilities = loaded_model.predict_proba(
+        patient_scaled
+    )[0]
+
+    confidence = probabilities[int(prediction)] * 100
 
     if prediction == 1:
         result = "Thyroid disease detected"
@@ -58,7 +71,9 @@ def counterfactual_explanation(patient_data):
 
     patient_scaled = loaded_scaler.transform(patient_df)
 
-    original_prediction = loaded_model.predict(patient_scaled)[0]
+    original_prediction = loaded_model.predict(
+        patient_scaled
+    )[0]
 
     counterfactuals = []
 
@@ -98,7 +113,7 @@ def counterfactual_explanation(patient_data):
 
 
 # ==============================
-# Main Application
+# Main Application Function
 # ==============================
 
 def thyroid_app(*values):
@@ -109,20 +124,33 @@ def thyroid_app(*values):
         patient_data
     )
 
-    original_prediction, counterfactuals = \
+    original_prediction, counterfactuals = (
         counterfactual_explanation(patient_data)
+    )
+
+    # --------------------------
+    # Prediction Result
+    # --------------------------
 
     if original_prediction == 1:
 
         result_text = """
 ## ⚠️ Thyroid Disease Detected
+
+The machine-learning model predicts the thyroid-disease class.
 """
 
     else:
 
         result_text = """
 ## ✅ No Thyroid Disease Detected
+
+The machine-learning model predicts the no-thyroid-disease class.
 """
+
+    # --------------------------
+    # Probability Result
+    # --------------------------
 
     probability_text = f"""
 ### 📊 Prediction Probabilities
@@ -133,6 +161,10 @@ def thyroid_app(*values):
 
 **Model Confidence:** `{confidence:.2f}%`
 """
+
+    # --------------------------
+    # Counterfactual Explanation
+    # --------------------------
 
     if counterfactuals:
 
@@ -161,15 +193,18 @@ def thyroid_app(*values):
 No single-feature counterfactual change was found
 among the tested feature values.
 
-This explanation describes the machine-learning
-model's behavior and is not a medical diagnosis.
+This means that, within the tested dataset value ranges,
+the model prediction remained stable.
+
+> ℹ️ This is an explanation of machine-learning model behavior,
+> not a medical diagnosis.
 """
 
     return result_text, probability_text, xai_text
 
 
 # ==============================
-# User Interface
+# Custom CSS
 # ==============================
 
 custom_css = """
@@ -198,8 +233,13 @@ custom_css = """
 """
 
 
+# ==============================
+# User Interface
+# ==============================
+
 with gr.Blocks(
-    title="ThyroCare AI"
+    title="ThyroCare AI",
+    css=custom_css
 ) as app:
 
     gr.Markdown(
@@ -289,10 +329,22 @@ diagnosis or treatment.
     )
 
 
+# ==============================
+# Start Application
+# ==============================
+
 print("✅ ThyroCare AI application created successfully!")
-import os
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    demo.launch(server_name="0.0.0.0", server_port=port)
+
+    port = int(
+        os.environ.get("PORT", 7860)
+    )
+
+    print(f"🚀 Starting Gradio server on port {port}")
+
+    app.launch(
+        server_name="0.0.0.0",
+        server_port=port
+    )
 
